@@ -46,7 +46,7 @@
     }
 
     /* Container */
-    #app, #loginPage, #memberLoginPage {
+    #app, #welcomePage, #loginPage, #memberLoginPage, #memberRegisterPage {
       max-width: 1300px;
       margin: 1rem auto;
       background: rgba(255, 255, 255, 0.05);
@@ -354,7 +354,7 @@
     }
 
     /* Forms */
-    form.new-case-form, form.feedback-form, form.edit-case-form, form.login-form, form.task-form, form.ticket-form {
+    form.new-case-form, form.feedback-form, form.edit-case-form, form.login-form, form.task-form, form.ticket-form, form.register-form, form.edit-member-form {
       max-width: 650px;
       margin: 0 auto;
     }
@@ -454,15 +454,41 @@
       to { transform: translateY(0); opacity: 1; }
     }
 
-    /* Login Page */
-    .login-container {
+    /* Welcome/Login/Register Pages */
+    .welcome-container, .login-container, .register-container {
       max-width: 400px;
       margin: 5rem auto;
       padding: 2rem;
-    }
-    .login-container h2 {
       text-align: center;
+    }
+    .welcome-container h1 {
       margin-bottom: 1.5rem;
+    }
+    .welcome-container p {
+      font-size: 1.1rem;
+      margin-bottom: 2rem;
+      color: #b8c4ff;
+    }
+    .welcome-container .btn-group {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .welcome-container button, .login-container button, .register-container button {
+      background: #3468f0;
+      border: none;
+      color: white;
+      padding: 0.8rem 1.6rem;
+      font-weight: 700;
+      font-size: 1.1rem;
+      border-radius: 16px;
+      cursor: pointer;
+      box-shadow: 0 0 12px #527ff6bb;
+      transition: background-color 0.3s ease;
+    }
+    .welcome-container button:hover, .login-container button:hover, .register-container button:hover {
+      background: #4a83ff;
     }
     .error-message {
       color: #ff4a3daa;
@@ -572,6 +598,19 @@
   </style>
 </head>
 <body>
+  <!-- Welcome Page -->
+  <div id="welcomePage" style="display: none;">
+    <div class="welcome-container">
+      <h1>Welcome to MEDU Case Vault</h1>
+      <p>A curated platform for medical case studies, tickets, and tasks by the Medical Education Department.</p>
+      <div class="btn-group">
+        <button id="adminLoginBtn">Admin Login</button>
+        <button id="memberLoginBtn">Member Login</button>
+        <button id="memberRegisterBtn">Member Register</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Admin Login Page -->
   <div id="loginPage" style="display: none;">
     <div class="login-container">
@@ -584,7 +623,7 @@
         <input type="password" id="password" name="password" required placeholder="Enter password" autocomplete="current-password" />
         <button type="submit" class="submit-btn">Login</button>
         <p style="text-align: center; margin-top: 1rem;">
-          <a href="#" id="switchToMemberLogin">Login as Member</a>
+          <a href="#" id="backToWelcomeFromAdmin">Back to Welcome</a>
         </p>
       </form>
     </div>
@@ -594,13 +633,33 @@
   <div id="memberLoginPage" style="display: none;">
     <div class="login-container">
       <h2>Member Login</h2>
-      <div class="error-message" id="memberLoginError">Please enter a valid name</div>
+      <div class="error-message" id="memberLoginError">Invalid name or password</div>
       <form class="login-form" aria-label="Member login form">
         <label for="memberName">Name</label>
-        <input type="text" id="memberName" name="memberName" required placeholder="Enter your name" autocomplete="name" />
+        <input type="text" id="memberName" name="memberName" required placeholder="Enter your name" autocomplete="username" />
+        <label for="memberPassword">Password</label>
+        <input type="password" id="memberPassword" name="memberPassword" required placeholder="Enter your password" autocomplete="current-password" />
         <button type="submit" class="submit-btn">Login</button>
         <p style="text-align: center; margin-top: 1rem;">
-          <a href="#" id="switchToAdminLogin">Login as Admin</a>
+          <a href="#" id="backToWelcomeFromMemberLogin">Back to Welcome</a>
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Member Register Page -->
+  <div id="memberRegisterPage" style="display: none;">
+    <div class="register-container">
+      <h2>Member Registration</h2>
+      <div class="error-message" id="memberRegisterError">Name already taken or invalid input</div>
+      <form class="register-form" aria-label="Member registration form">
+        <label for="registerName">Name</label>
+        <input type="text" id="registerName" name="registerName" required placeholder="Enter your name" autocomplete="username" />
+        <label for="registerPassword">Password</label>
+        <input type="password" id="registerPassword" name="registerPassword" required placeholder="Create a password" autocomplete="new-password" />
+        <button type="submit" class="submit-btn">Register</button>
+        <p style="text-align: center; margin-top: 1rem;">
+          <a href="#" id="backToWelcomeFromRegister">Back to Welcome</a>
         </p>
       </form>
     </div>
@@ -635,7 +694,7 @@
     </main>
   </div>
 
-  <!-- Case/Ticket/Task Detail/Edit Modal -->
+  <!-- Item Detail/Edit Modal -->
   <div class="modal" id="itemModal" aria-hidden="true" role="dialog" aria-labelledby="modalTitle">
     <div class="modal-content">
       <div class="modal-header">
@@ -643,6 +702,17 @@
         <button class="close-btn" aria-label="Close modal" id="modalClose">×</button>
       </div>
       <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- Member Management Modal -->
+  <div class="modal" id="memberModal" aria-hidden="true" role="dialog" aria-labelledby="memberModalTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="memberModalTitle">Manage Member</h2>
+        <button class="close-btn" aria-label="Close modal" id="memberModalClose">×</button>
+      </div>
+      <div id="memberModalBody"></div>
     </div>
   </div>
 
@@ -737,7 +807,11 @@
       let tickets = JSON.parse(localStorage.getItem('tickets')) || initialTickets;
       let tasks = JSON.parse(localStorage.getItem('tasks')) || initialTasks;
       let feedbackList = JSON.parse(localStorage.getItem('feedbackList')) || [];
-      let members = JSON.parse(localStorage.getItem('members')) || [];
+      let members = JSON.parse(localStorage.getItem('members')) || [
+        { name: "Dr. Smith", password: "smith123" },
+        { name: "Dr. Lee", password: "lee123" },
+        { name: "Dr. Chen", password: "chen123" }
+      ];
       let notifications = JSON.parse(localStorage.getItem('notifications')) || [];
       let filteredCases = [...cases];
       let filteredTickets = [...tickets];
@@ -747,13 +821,19 @@
 
       // DOM elements
       const app = document.getElementById('app');
+      const welcomePage = document.getElementById('welcomePage');
       const loginPage = document.getElementById('loginPage');
       const memberLoginPage = document.getElementById('memberLoginPage');
+      const memberRegisterPage = document.getElementById('memberRegisterPage');
       const content = document.getElementById('content');
-      const modal = document.getElementById('itemModal');
-      const modalTitle = document.getElementById('modalTitle');
-      const modalBody = document.getElementById('modalBody');
-      const modalClose = document.getElementById('modalClose');
+      const itemModal = document.getElementById('itemModal');
+      const itemModalTitle = document.getElementById('modalTitle');
+      const itemModalBody = document.getElementById('modalBody');
+      const itemModalClose = document.getElementById('modalClose');
+      const memberModal = document.getElementById('memberModal');
+      const memberModalTitle = document.getElementById('memberModalTitle');
+      const memberModalBody = document.getElementById('memberModalBody');
+      const memberModalClose = document.getElementById('memberModalClose');
       const notification = document.getElementById('notification');
       const navLinks = document.querySelectorAll('.nav-link');
       const darkModeToggle = document.getElementById('darkModeToggle');
@@ -772,13 +852,17 @@
       function checkAuth() {
         if (!user.role) {
           app.style.display = 'none';
-          loginPage.style.display = 'block';
-          memberLoginPage.style.display = 'none';
-          renderAdminLogin();
-        } else {
-          app.style.display = 'flex';
           loginPage.style.display = 'none';
           memberLoginPage.style.display = 'none';
+          memberRegisterPage.style.display = 'none';
+          welcomePage.style.display = 'block';
+          renderWelcome();
+        } else {
+          app.style.display = 'flex';
+          welcomePage.style.display = 'none';
+          loginPage.style.display = 'none';
+          memberLoginPage.style.display = 'none';
+          memberRegisterPage.style.display = 'none';
           updateNavLinks();
           activateSection('dashboard');
         }
@@ -793,6 +877,25 @@
           } else {
             link.style.display = 'block';
           }
+        });
+      }
+
+      // Render welcome page
+      function renderWelcome() {
+        document.getElementById('adminLoginBtn').addEventListener('click', () => {
+          welcomePage.style.display = 'none';
+          loginPage.style.display = 'block';
+          renderAdminLogin();
+        });
+        document.getElementById('memberLoginBtn').addEventListener('click', () => {
+          welcomePage.style.display = 'none';
+          memberLoginPage.style.display = 'block';
+          renderMemberLogin();
+        });
+        document.getElementById('memberRegisterBtn').addEventListener('click', () => {
+          welcomePage.style.display = 'none';
+          memberRegisterPage.style.display = 'block';
+          renderMemberRegister();
         });
       }
 
@@ -817,11 +920,11 @@
             errorMessage.classList.add('active');
           }
         });
-        document.getElementById('switchToMemberLogin').addEventListener('click', e => {
+        document.getElementById('backToWelcomeFromAdmin').addEventListener('click', e => {
           e.preventDefault();
           loginPage.style.display = 'none';
-          memberLoginPage.style.display = 'block';
-          renderMemberLogin();
+          welcomePage.style.display = 'block';
+          renderWelcome();
         });
       }
 
@@ -832,13 +935,18 @@
         form.addEventListener('submit', e => {
           e.preventDefault();
           const name = form.memberName.value.trim();
-          if (!name || members.includes(name)) {
-            errorMessage.textContent = members.includes(name) ? 'Name already in use' : 'Please enter a valid name';
+          const password = form.memberPassword.value.trim();
+          const member = members.find(m => m.name === name);
+          if (!member) {
+            errorMessage.textContent = 'Name not registered';
             errorMessage.classList.add('active');
             return;
           }
-          members.push(name);
-          localStorage.setItem('members', JSON.stringify(members));
+          if (member.password !== password) {
+            errorMessage.textContent = 'Incorrect password';
+            errorMessage.classList.add('active');
+            return;
+          }
           user = { role: 'member', name };
           localStorage.setItem('user', JSON.stringify(user));
           app.style.display = 'flex';
@@ -848,11 +956,41 @@
           form.reset();
           errorMessage.classList.remove('active');
         });
-        document.getElementById('switchToAdminLogin').addEventListener('click', e => {
+        document.getElementById('backToWelcomeFromMemberLogin').addEventListener('click', e => {
           e.preventDefault();
           memberLoginPage.style.display = 'none';
-          loginPage.style.display = 'block';
-          renderAdminLogin();
+          welcomePage.style.display = 'block';
+          renderWelcome();
+        });
+      }
+
+      // Member registration
+      function renderMemberRegister() {
+        const form = memberRegisterPage.querySelector('.register-form');
+        const errorMessage = document.getElementById('memberRegisterError');
+        form.addEventListener('submit', e => {
+          e.preventDefault();
+          const name = form.registerName.value.trim();
+          const password = form.registerPassword.value.trim();
+          if (!name || !password || members.some(m => m.name === name)) {
+            errorMessage.textContent = members.some(m => m.name === name) ? 'Name already taken' : 'Please enter valid name and password';
+            errorMessage.classList.add('active');
+            return;
+          }
+          members.push({ name, password });
+          localStorage.setItem('members', JSON.stringify(members));
+          showNotification('Registration successful! Please login.');
+          form.reset();
+          errorMessage.classList.remove('active');
+          memberRegisterPage.style.display = 'none';
+          memberLoginPage.style.display = 'block';
+          renderMemberLogin();
+        });
+        document.getElementById('backToWelcomeFromRegister').addEventListener('click', e => {
+          e.preventDefault();
+          memberRegisterPage.style.display = 'none';
+          welcomePage.style.display = 'block';
+          renderWelcome();
         });
       }
 
@@ -861,8 +999,8 @@
         user = { role: null, name: null };
         localStorage.setItem('user', JSON.stringify(user));
         app.style.display = 'none';
-        loginPage.style.display = 'block';
-        renderAdminLogin();
+        welcomePage.style.display = 'block';
+        renderWelcome();
       });
 
       // Dark mode toggle
@@ -923,8 +1061,8 @@
       function renderDashboard() {
         const performance = calculatePerformance();
         const memberPerformance = user.role === 'admin' ? members.map(m => ({
-          name: m,
-          ...calculatePerformance(m)
+          name: m.name,
+          ...calculatePerformance(m.name)
         })) : user.role === 'member' ? [{
           name: user.name,
           ...calculatePerformance(user.name)
@@ -1377,10 +1515,10 @@
         }
         if (!item) return;
 
-        modalTitle.textContent = editMode ? `Edit ${titlePrefix}: ${item.id}` : `${titlePrefix}: ${item.id} - ${item.title}`;
+        itemModalTitle.textContent = editMode ? `Edit ${titlePrefix}: ${item.id}` : `${titlePrefix}: ${item.id} - ${item.title}`;
         if (editMode && user.role === 'admin') {
           if (type === 'case') {
-            modalBody.innerHTML = `
+            itemModalBody.innerHTML = `
               <form class="edit-case-form" aria-label="Edit case form">
                 <label for="editTitle">Case Title</label>
                 <input type="text" id="editTitle" name="title" value="${item.title}" required maxlength="100" />
@@ -1412,12 +1550,12 @@
                 <textarea id="editNotes" name="notes">${item.notes}</textarea>
                 <div style="display: flex; gap: 1rem;">
                   <button type="submit" class="submit-btn">Save Changes</button>
-                  <button type="button" class="submit-btn" id="deleteItemBtn">Delete Case</button>
+                  <button type="button" class="delete-btn" id="deleteItemBtn">Delete Case</button>
                 </div>
               </form>
             `;
           } else if (type === 'ticket') {
-            modalBody.innerHTML = `
+            itemModalBody.innerHTML = `
               <form class="edit-ticket-form" aria-label="Edit ticket form">
                 <label for="editTitle">Ticket Title</label>
                 <input type="text" id="editTitle" name="title" value="${item.title}" required maxlength="100" />
@@ -1431,12 +1569,12 @@
                 </select>
                 <div style="display: flex; gap: 1rem;">
                   <button type="submit" class="submit-btn">Save Changes</button>
-                  <button type="button" class="submit-btn" id="deleteItemBtn">Delete Ticket</button>
+                  <button type="button" class="delete-btn" id="deleteItemBtn">Delete Ticket</button>
                 </div>
               </form>
             `;
           } else if (type === 'task') {
-            modalBody.innerHTML = `
+            itemModalBody.innerHTML = `
               <form class="edit-task-form" aria-label="Edit task form">
                 <label for="editTitle">Task Title</label>
                 <input type="text" id="editTitle" name="title" value="${item.title}" required maxlength="100" />
@@ -1458,12 +1596,12 @@
                 <textarea id="editFeedback" name="feedback">${item.feedback}</textarea>
                 <div style="display: flex; gap: 1rem;">
                   <button type="submit" class="submit-btn">Save Changes</button>
-                  <button type="button" class="submit-btn" id="deleteItemBtn">Delete Task</button>
+                  <button type="button" class="delete-btn" id="deleteItemBtn">Delete Task</button>
                 </div>
               </form>
             `;
           }
-          const form = modalBody.querySelector(`.edit-${type}-form`);
+          const form = itemModalBody.querySelector(`.edit-${type}-form`);
           form.addEventListener('submit', e => {
             e.preventDefault();
             const updatedItem = {
@@ -1510,8 +1648,8 @@
               localStorage.setItem('tasks', JSON.stringify(tasks));
               filteredTasks = [...tasks];
             }
-            modal.classList.remove('active');
-            modal.setAttribute('aria-hidden', 'true');
+            itemModal.classList.remove('active');
+            itemModal.setAttribute('aria-hidden', 'true');
             showNotification(`${titlePrefix} updated successfully!`);
             activateSection(type === 'case' ? 'cases' : type === 'ticket' ? 'tickets' : 'tasks');
           });
@@ -1532,115 +1670,154 @@
                 localStorage.setItem('tasks', JSON.stringify(tasks));
                 filteredTasks = [...tasks];
               }
-              modal.classList.remove('active');
-              modal.setAttribute('aria-hidden', 'true');
+              itemModal.classList.remove('active');
+              itemModal.setAttribute('aria-hidden', 'true');
               showNotification(`${titlePrefix} deleted successfully!`);
               activateSection(type === 'case' ? 'cases' : type === 'ticket' ? 'tickets' : 'tasks');
             }
           });
         } else {
-          modalBody.innerHTML = `
-            ${dataFields.map(field => `
+          itemModalBody.innerHTML = `
               <div class="modal-section">
-                <h3>${field.charAt(0).toUpperCase() + field.slice(1)}</h3>
-                <p>${item[field] || 'N/A'}</p>
+                <h3>Title</h3>
+                <p>${item.title}</p>
               </div>
-            `).join('')}
-            ${type === 'task' && item.rating > 0 ? `
-              <div class="modal-section">
-                <h3>Rating</h3>
-                <p>${'★'.repeat(item.rating)}${'☆'.repeat(5 - item.rating)}</p>
-              </div>
-            ` : ''}
-            ${type === 'case' && user.role === 'admin' ? `
-              <button class="submit-btn" id="editItemBtn" style="margin-bottom: 1rem;">Edit Case</button>
-              <form class="feedback-form" aria-label="Case feedback form">
-                <label for="feedbackText">Submit Feedback</label>
-                <textarea id="feedbackText" name="feedbackText" rows="4" required placeholder="Enter your feedback..."></textarea>
-                <button type="submit" class="submit-btn">Submit Feedback</button>
-              </form>
-            ` : ''}
-          `;
-          if (type === 'case' && user.role === 'admin') {
-            document.getElementById('editItemBtn').addEventListener('click', () => openItemModal(id, type, true));
-            const feedbackForm = modalBody.querySelector('.feedback-form');
-            feedbackForm.addEventListener('submit', e => {
-              e.preventDefault();
-              const feedbackText = feedbackForm.feedbackText.value.trim();
-              if (!feedbackText) {
-                showNotification('Feedback cannot be empty.', 'error');
-                return;
-              }
-              feedbackList.push({
-                caseId: item.id,
-                feedback: feedbackText,
-                timestamp: new Date().toISOString()
-              });
-              localStorage.setItem('feedbackList', JSON.stringify(feedbackList));
-              notifications.push({
-                recipient: item.creator,
-                message: `New feedback on case ${item.id}: ${feedbackText.substring(0, 50)}${feedbackText.length > 50 ? '...' : ''}`,
-                timestamp: new Date().toISOString()
-              });
-              localStorage.setItem('notifications', JSON.stringify(notifications));
-              feedbackForm.reset();
-              showNotification('Feedback submitted successfully!');
-              if (user.name === item.creator) {
-                renderDashboard();
-              }
-            });
-          } else if ((type === 'ticket' || type === 'task') && user.role === 'admin') {
-            modalBody.innerHTML += `
-              <button class="submit-btn" id="editItemBtn" style="margin-bottom: 1rem;">Edit ${titlePrefix}</button>
+              ${type === 'case' ? `
+                <div class="modal-section">
+                  <h3>Type</h3>
+                  <p>${item.type}</p>
+                </div>
+                <div class="modal-section">
+                  <h3>Status</h3>
+                  <p><span class="badge ${item.status.toLowerCase()}">${item.status}</span></p>
+                </div>
+                <div class="modal-section">
+                  <h3>Creator</h3>
+                  <p>${item.creator}</p>
+                </div>
+                <div class="modal-section">
+                  <h3>Assigned To</h3>
+                  <p>${item.assignedTo}</p>
+                </div>
+                <div class="modal-section">
+                  <h3>Last Updated</h3>
+                  <p>${item.lastUpdated}</p>
+                </div>
+              ` : ''}
+              ${dataFields.map(field => `
+                <div class="modal-section">
+                  <h3>${field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1')}</h3>
+                  <p>${item[field] || 'N/A'}</p>
+                </div>
+              `).join('')}
+              ${type === 'task' && item.rating > 0 ? `
+                <div class="modal-section">
+                  <h3>Rating</h3>
+                  <p>${'★'.repeat(item.rating)}${'☆'.repeat(5 - item.rating)}</p>
+                </div>
+              ` : ''}
+              ${user.role === 'admin' ? `
+                <div class="modal-section">
+                  <button class="submit-btn" id="editItemBtn">Edit ${titlePrefix}</button>
+                  ${type === 'case' ? `
+                    <h3>Submit Feedback</h3>
+                    <form class="feedback-form" aria-label="Feedback form">
+                      <label for="feedbackText">Feedback</label>
+                      <textarea id="feedbackText" name="feedbackText" required placeholder="Enter feedback"></textarea>
+                      <button type="submit" class="submit-btn">Submit Feedback</button>
+                    </form>
+                  ` : ''}
+                </div>
+              ` : ''}
             `;
-            document.getElementById('editItemBtn').addEventListener('click', () => openItemModal(id, type, true));
+          if (user.role === 'admin') {
+            document.getElementById('editItemBtn')?.addEventListener('click', () => {
+              openItemModal(id, type, true);
+            });
+            if (type === 'case') {
+              const feedbackForm = itemModalBody.querySelector('.feedback-form');
+              feedbackForm?.addEventListener('submit', e => {
+                e.preventDefault();
+                const feedbackText = feedbackForm.feedbackText.value.trim();
+                if (!feedbackText) {
+                  showNotification('Feedback cannot be empty.', 'error');
+                  return;
+                }
+                const feedback = {
+                  caseId: item.id,
+                  feedback: feedbackText,
+                  timestamp: new Date().toISOString()
+                };
+                feedbackList.push(feedback);
+                localStorage.setItem('feedbackList', JSON.stringify(feedbackList));
+                if (item.creator !== user.name) {
+                  notifications.push({
+                    recipient: item.creator,
+                    message: `Feedback on case ${item.id}: ${feedbackText.slice(0, 50)}${feedbackText.length > 50 ? '...' : ''}`,
+                    timestamp: new Date().toISOString()
+                  });
+                  localStorage.setItem('notifications', JSON.stringify(notifications));
+                }
+                showNotification('Feedback submitted!');
+                feedbackForm.reset();
+                itemModal.classList.remove('active');
+                itemModal.setAttribute('aria-hidden', 'true');
+                activateSection('cases');
+              });
+            }
           }
         }
-        modal.classList.add('active');
-        modal.setAttribute('aria-hidden', 'false');
+        itemModal.classList.add('active');
+        itemModal.setAttribute('aria-hidden', 'false');
+        itemModalClose.focus();
       }
 
       // Close modal
-      modalClose.addEventListener('click', closeModal);
-      modal.addEventListener('click', e => {
-        if (e.target === modal) closeModal();
+      itemModalClose.addEventListener('click', () => {
+        itemModal.classList.remove('active');
+        itemModal.setAttribute('aria-hidden', 'true');
+      });
+      itemModal.addEventListener('click', e => {
+        if (e.target === itemModal) {
+          itemModal.classList.remove('active');
+          itemModal.setAttribute('aria-hidden', 'true');
+        }
       });
       document.addEventListener('keydown', e => {
-        if (e.key === 'Escape' && modal.classList.contains('active')) closeModal();
+        if (e.key === 'Escape' && itemModal.classList.contains('active')) {
+          itemModal.classList.remove('active');
+          itemModal.setAttribute('aria-hidden', 'true');
+        }
       });
-      function closeModal() {
-        modal.classList.remove('active');
-        modal.setAttribute('aria-hidden', 'true');
-      }
 
       // Render new case form
       function renderNewCaseForm() {
         content.innerHTML = `
-          <h2>Submit New Medical Case</h2>
-          <form class="new-case-form" aria-label="New medical case submission form">
+          <h2>Create New Case</h2>
+          <form class="new-case-form" aria-label="New case form">
             <label for="caseTitle">Case Title</label>
             <input type="text" id="caseTitle" name="caseTitle" required placeholder="Enter case title" maxlength="100" />
             <label for="caseType">Case Type</label>
             <select id="caseType" name="caseType" required>
-              <option value="" disabled selected>Select type</option>
               <option value="Ethical">Ethical</option>
               <option value="Emergency">Emergency</option>
               <option value="Pediatrics">Pediatrics</option>
             </select>
             <label for="caseAssignedTo">Assigned To</label>
-            <input type="text" id="caseAssignedTo" name="caseAssignedTo" required placeholder="Enter assignee (e.g., Dr. Smith)" maxlength="50" />
+            <input type="text" id="caseAssignedTo" name="caseAssignedTo" required placeholder="Enter assigned member's name" maxlength="50" />
             <label for="caseSymptoms">Symptoms</label>
-            <textarea id="caseSymptoms" name="caseSymptoms" rows="3" required placeholder="Describe symptoms"></textarea>
+            <textarea id="caseSymptoms" name="caseSymptoms" required placeholder="Describe symptoms"></textarea>
             <label for="caseHistory">History</label>
-            <textarea id="caseHistory" name="caseHistory" rows="4" required placeholder="Patient history"></textarea>
+            <textarea id="caseHistory" name="caseHistory" required placeholder="Patient history"></textarea>
             <label for="caseLabResults">Lab Results</label>
-            <textarea id="caseLabResults" name="caseLabResults" rows="3" placeholder="Lab results (optional)"></textarea>
+            <textarea id="caseLabResults" name="caseLabResults" placeholder="Enter lab results (optional)"></textarea>
             <label for="caseDiagnosis">Diagnosis</label>
-            <textarea id="caseDiagnosis" name="caseDiagnosis" rows="3" placeholder="Diagnosis (optional)"></textarea>
+            <textarea id="caseDiagnosis" name="caseDiagnosis" placeholder="Enter diagnosis (optional)"></textarea>
             <label for="caseOutcome">Outcome</label>
-            <textarea id="caseOutcome" name="caseOutcome" rows="3" placeholder="Outcome (optional)"></textarea>
+            <textarea id="caseOutcome" name="caseOutcome" placeholder="Enter outcome (optional)"></textarea>
             <button type="submit" class="submit-btn">Submit Case</button>
-          </form>        `;
+          </form>
+        `;
         const form = content.querySelector('.new-case-form');
         form.addEventListener('submit', e => {
           e.preventDefault();
@@ -1701,8 +1878,8 @@
       // Render members section (admin only)
       function renderMembers() {
         const memberPerformance = members.map(m => ({
-          name: m,
-          ...calculatePerformance(m)
+          name: m.name,
+          ...calculatePerformance(m.name)
         }));
         content.innerHTML = `
           <h2>Team Members</h2>
@@ -1717,19 +1894,134 @@
                 <div class="progress-bar-container">
                   <div class="progress-bar" style="width: ${mp.completion}%">${mp.completion}%</div>
                 </div>
+                <button class="submit-btn" data-member="${mp.name}" id="manageMemberBtn">Manage Member</button>
               </div>
             `).join('')}
           </div>
         `;
+        document.querySelectorAll('#manageMemberBtn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            openMemberModal(btn.dataset.member);
+          });
+        });
       }
+
+      // Open member management modal (admin only)
+      function openMemberModal(memberName) {
+        const member = members.find(m => m.name === memberName);
+        if (!member) return;
+        memberModalTitle.textContent = `Manage Member: ${memberName}`;
+        memberModalBody.innerHTML = `
+          <form class="edit-member-form" aria-label="Edit member form">
+            <label for="editMemberName">New Username</label>
+            <input type="text" id="editMemberName" name="newName" value="${member.name}" required maxlength="50" />
+            <label for="editMemberPassword">New Password</label>
+            <input type="password" id="editMemberPassword" name="newPassword" placeholder="Enter new password" />
+            <div style="display: flex; gap: 1rem;">
+              <button type="submit" class="submit-btn">Save Changes</button>
+              <button type="button" class="delete-btn" id="deleteMemberBtn">Delete Member</button>
+            </div>
+          </form>
+        `;
+        const form = memberModalBody.querySelector('.edit-member-form');
+        form.addEventListener('submit', e => {
+          e.preventDefault();
+          const newName = form.newName.value.trim();
+          const newPassword = form.newPassword.value.trim();
+          if (!newName) {
+            showNotification('Username cannot be empty.', 'error');
+            return;
+          }
+          if (newName !== memberName && members.some(m => m.name === newName)) {
+            showNotification('Username already taken.', 'error');
+            return;
+          }
+          // Update member details
+          members = members.map(m => m.name === memberName ? { name: newName, password: newPassword || m.password } : m);
+          // Update related data
+          cases = cases.map(c => ({
+            ...c,
+            creator: c.creator === memberName ? newName : c.creator,
+            assignedTo: c.assignedTo === memberName ? newName : c.assignedTo
+          }));
+          tickets = tickets.map(t => ({
+            ...t,
+            creator: t.creator === memberName ? newName : t.creator
+          }));
+          tasks = tasks.map(t => ({
+            ...t,
+            creator: t.creator === memberName ? newName : t.creator
+          }));
+          notifications = notifications.map(n => ({
+            ...n,
+            recipient: n.recipient === memberName ? newName : n.recipient
+          }));
+          if (user.name === memberName) {
+            user.name = newName;
+            localStorage.setItem('user', JSON.stringify(user));
+          }
+          localStorage.setItem('members', JSON.stringify(members));
+          localStorage.setItem('cases', JSON.stringify(cases));
+          localStorage.setItem('tickets', JSON.stringify(tickets));
+          localStorage.setItem('tasks', JSON.stringify(tasks));
+          localStorage.setItem('notifications', JSON.stringify(notifications));
+          showNotification('Member updated successfully!');
+          memberModal.classList.remove('active');
+          memberModal.setAttribute('aria-hidden', 'true');
+          renderMembers();
+        });
+        document.getElementById('deleteMemberBtn').addEventListener('click', () => {
+          if (confirm(`Are you sure you want to delete member ${memberName}?`)) {
+            members = members.filter(m => m.name !== memberName);
+            // Remove associated data
+            cases = cases.filter(c => c.creator !== memberName && c.assignedTo !== memberName);
+            tickets = tickets.filter(t => t.creator !== memberName);
+            tasks = tasks.filter(t => t.creator !== memberName);
+            notifications = notifications.filter(n => n.recipient !== memberName);
+            localStorage.setItem('members', JSON.stringify(members));
+            localStorage.setItem('cases', JSON.stringify(cases));
+            localStorage.setItem('tickets', JSON.stringify(tickets));
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            localStorage.setItem('notifications', JSON.stringify(notifications));
+            filteredCases = [...cases];
+            filteredTickets = [...tickets];
+            filteredTasks = [...tasks];
+            showNotification('Member deleted successfully!');
+            memberModal.classList.remove('active');
+            memberModal.setAttribute('aria-hidden', 'true');
+            renderMembers();
+          }
+        });
+        memberModal.classList.add('active');
+        memberModal.setAttribute('aria-hidden', 'false');
+        memberModalClose.focus();
+      }
+
+      // Close member modal
+      memberModalClose.addEventListener('click', () => {
+        memberModal.classList.remove('active');
+        memberModal.setAttribute('aria-hidden', 'true');
+      });
+      memberModal.addEventListener('click', e => {
+        if (e.target === memberModal) {
+          memberModal.classList.remove('active');
+          memberModal.setAttribute('aria-hidden', 'true');
+        }
+      });
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && memberModal.classList.contains('active')) {
+          memberModal.classList.remove('active');
+          memberModal.setAttribute('aria-hidden', 'true');
+        }
+      });
 
       // Render about section
       function renderAbout() {
         content.innerHTML = `
           <h2>About MEDU Case Vault</h2>
           <p>Welcome to the MEDU Case Vault, a curated collection of medical case studies, tickets, and tasks designed for clinical learning and roleplay by the Medical Education Department.</p>
-          <p>Admins can manage cases, tickets, tasks, and provide feedback, while members can contribute cases, tickets, and tasks, and view their performance metrics.</p>
-          <p>Features include case management, ticket tracking, task assignment with ratings, feedback notifications, and performance tracking.</p>
+          <p>Admins can manage cases, tickets, tasks, member credentials, and provide feedback, while members can contribute cases, tickets, and tasks, and view their performance metrics.</p>
+          <p>Features include case management, ticket tracking, task assignment with ratings, feedback notifications, performance tracking, and member management.</p>
           <p>Developed by Luna.C.Everly with emphasis on UX, accessibility, and immersive medical education.</p>
         `;
       }
@@ -1768,7 +2060,8 @@
             renderTasksTable();
             break;
           case 'feedback':
-            renderFeedback();
+            if (user.role === 'admin') renderFeedback();
+            else activateSection('dashboard');
             break;
           case 'members':
             if (user.role === 'admin') renderMembers();
