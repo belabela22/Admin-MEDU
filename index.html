@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MEDU Case Vault — Admin Mode</title>
+  <style>
+    :root {
+      --primary: #1e81b0;
+      --bg: #eaf6ff;
+      --glass: rgba(255,255,255,0.7);
+      --shadow: rgba(0,0,0,0.1);
+      --badge-open: #e74c3c;
+      --badge-pending: #f1c40f;
+      --badge-solved: #2ecc71;
+    }
+    /* ... keep your existing CSS above ... */
+    .admin-controls {
+      display: block;
+      margin-top: 0.5rem;
+    }
+    .admin-controls button {
+      margin-right: 0.5rem;
+      padding: 0.2rem 0.5rem;
+      font-size: 0.8rem;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      color: #fff;
+    }
+    .btn-edit { background: #3498db; }
+    .btn-delete { background: #e74c3c; }
+    .btn-export { background: #27ae60; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>MEDU Case Vault</h1>
+    <small>By Luna.C.Everly — Medical Education Dept.</small>
+    <button id="adminLoginBtn">🔧 Admin Login</button>
+  </header>
+
+  <main id="app">
+    <!-- Sidebar/Nav -->
+    <nav class="sidebar">
+      <a href="#" class="nav-link active" data-section="cases">Cases</a>
+      <a href="#" class="nav-link" data-section="add">Add Case</a>
+      <a href="#" class="nav-link" data-section="about">About</a>
+    </nav>
+
+    <section class="content" id="content"></section>
+  </main>
+
+  <!-- Modal for case details (same as before) -->
+  <div class="modal" id="caseModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle"></h2>
+        <button class="close-btn" id="modalClose">&times;</button>
+      </div>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      // --- Case Data ---
+      let isAdmin = false;
+      const ADMIN_PW = 'supersecret'; // 🚨 Change me!
+
+      const cases = [
+        { id:"MEDU-001", title:"ER Trauma", type:"Emergency", status:"Open", assignedTo:"Dr. Lee", lastUpdated:"2025-07-05", symptoms:"...", history:"...", labResults:"...", diagnosis:"...", outcome:"...", notes:"" },
+        { id:"MEDU-002", title:"Consent Ethics", type:"Ethical", status:"Solved", assignedTo:"Dr. Smith", lastUpdated:"2025-06-20", symptoms:"...", history:"...", labResults:"...", diagnosis:"...", outcome:"...", notes:"" },
+        // ... add more cases
+      ];
+
+      // --- DOM ---
+      const content = document.getElementById('content');
+      const adminLoginBtn = document.getElementById('adminLoginBtn');
+
+      // --- Admin Login Handler ---
+      adminLoginBtn.addEventListener('click', () => {
+        const pw = prompt('Enter Admin Password:');
+        if (pw === ADMIN_PW) {
+          isAdmin = true;
+          alert('Admin mode activated!');
+          renderSection('cases');
+        } else {
+          alert('Wrong password.');
+        }
+      });
+
+      // --- Section Renders ---
+      function renderSection(sec) {
+        if (sec === 'cases') renderCases();
+        if (sec === 'add') renderAddCase();
+        if (sec === 'about') renderAbout();
+      }
+
+      // Sidebar nav click
+      document.querySelectorAll('.nav-link').forEach(lnk => {
+        lnk.addEventListener('click', e => {
+          e.preventDefault();
+          document.querySelectorAll('.nav-link').forEach(top => top.classList.remove('active'));
+          lnk.classList.add('active');
+          renderSection(lnk.dataset.section);
+        });
+      });
+
+      // --- Render Cases Table with Admin Controls ---
+      function renderCases() {
+        let html = `<h2>Medical Cases</h2>`;
+        html += `<table><thead><tr>
+                  <th>ID</th><th>Title</th><th>Type</th><th>Status</th><th>Assigned</th><th>Updated</th><th>Actions</th>
+                 </tr></thead><tbody>`;
+        cases.forEach((c, idx) => {
+          html += `<tr data-idx="${idx}">
+                    <td>${c.id}</td>
+                    <td>${c.title}</td>
+                    <td>${c.type}</td>
+                    <td><span class="badge badge-${c.status.toLowerCase()}">${c.status}</span></td>
+                    <td>${c.assignedTo}</td>
+                    <td>${c.lastUpdated}</td>
+                    <td>`;
+          if (isAdmin) {
+            html += `<div class="admin-controls">
+                        <button class="btn-edit">Edit</button>
+                        <button class="btn-delete">Delete</button>
+                        <button class="btn-export">Export</button>
+                     </div>`;
+          } else {
+            html += `–`;
+          }
+          html += `</td></tr>`;
+        });
+        html += `</tbody></table>`;
+        content.innerHTML = html;
+
+        document.querySelectorAll('tbody tr').forEach(tr => {
+          tr.addEventListener('click', e => {
+            if (!e.target.closest('button')) openModal(tr.dataset.idx);
+          });
+        });
+
+        if (isAdmin) {
+          document.querySelectorAll('.btn-edit').forEach(btn =>
+            btn.addEventListener('click', e => {
+              e.stopPropagation();
+              editCase(e.target.closest('tr').dataset.idx);
+            })
+          );
+          document.querySelectorAll('.btn-delete').forEach(btn =>
+            btn.addEventListener('click', e => {
+              e.stopPropagation();
+              deleteCase(e.target.closest('tr').dataset.idx);
+            })
+          );
+          document.querySelectorAll('.btn-export').forEach(btn =>
+            btn.addEventListener('click', e => {
+              e.stopPropagation();
+              exportCase(e.target.closest('tr').dataset.idx);
+            })
+          );
+        }
+      }
+
+      // --- Modal logic ---
+      const modal = document.getElementById('caseModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalBody = document.getElementById('modalBody');
+      document.getElementById('modalClose').addEventListener('click', () => modal.classList.remove('active'));
+
+      function openModal(idx) {
+        const c = cases[idx];
+        modalTitle.textContent = `${c.id} — ${c.title}`;
+        modalBody.innerHTML = `
+          <strong>Type:</strong> ${c.type}<br>
+          <strong>Status:</strong> ${c.status}<br>
+          <strong>Assigned:</strong> ${c.assignedTo}<br>
+          <strong>Last Updated:</strong> ${c.lastUpdated}<br><hr>
+          <p><strong>Symptoms:</strong> ${c.symptoms}</p>
+          <p><strong>History:</strong> ${c.history}</p>
+          <p><strong>Lab Results:</strong> ${c.labResults}</p>
+          <p><strong>Diagnosis:</strong> ${c.diagnosis}</p>
+          <p><strong>Outcome:</strong> ${c.outcome}</p>
+          <hr><strong>Notes:</strong><br>
+          <textarea id="caseNoteArea">${c.notes}</textarea><br>
+          <button id="saveNote" class="btn">Save Note</button>
+        `;
+        document.getElementById('saveNote').addEventListener('click', () => {
+          c.notes = document.getElementById('caseNoteArea').value;
+          alert('Note saved.');
+          modal.classList.remove('active');
+        });
+        modal.classList.add('active');
+      }
+
+      // --- Admin Functions ---
+      function editCase(idx) {
+        const c = cases[idx];
+        const newTitle = prompt('Edit title', c.title);
+        if (newTitle) c.title = newTitle;
+        renderCases();
+      }
+      function deleteCase(idx) {
+        if (confirm('Delete case?')) {
+          cases.splice(idx,1);
+          renderCases();
+        }
+      }
+      function exportCase(idx) {
+        const c = cases[idx];
+        const content = `Case ID: ${c.id}\nTitle: ${c.title}\nType: ${c.type}\nStatus: ${c.status}\nAssigned: ${c.assignedTo}\nUpdated: ${c.lastUpdated}\n\nSymptoms:\n${c.symptoms}\n\nHistory:\n${c.history}\n\nDiagnosis:\n${c.diagnosis}\n\nOutcome:\n${c.outcome}`;
+        const blob = new Blob([content], {type: 'text/plain'});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${c.id}_export.txt`;
+        link.click();
+      }
+
+      // --- Add New Case Section
+      function renderAddCase() {
+        content.innerHTML = `
+          <h2>Add New Case</h2>
+          <form id="caseForm">
+            <label>Title:<input type="text" name="title" required></label><br><br>
+            <label>Type:
+              <select name="type" required>
+                <option value="Emergency">Emergency</option>
+                <option value="Ethical">Ethical</option>
+                <option value="Pediatrics">Pediatrics</option>
+              </select>
+            </label><br><br>
+            <label>Status:
+              <select name="status" required>
+                <option value="Open">Open</option>
+                <option value="Pending">Pending</option>
+                <option value="Solved">Solved</option>
+              </select>
+            </label><br><br>
+            <label>Assigned:<input name="assignedTo" type="text"></label><br><br>
+            <label>Symptoms:<textarea name="symptoms"></textarea></label><br><br>
+            <label>Outcome:<textarea name="outcome"></textarea></label><br><br>
+            <button type="submit" class="btn">Create Case</button>
+          </form>`;
+        document.getElementById('caseForm').onsubmit = e => {
+          e.preventDefault();
+          const f = e.target;
+          const newC = {
+            id: `MEDU-${String(cases.length+1).padStart(3,'0')}`,
+            title: f.title.value,
+            type: f.type.value,
+            status: f.status.value,
+            assignedTo: f.assignedTo.value || 'Unassigned',
+            lastUpdated: new Date().toISOString().split('T')[0],
+            symptoms: f.symptoms.value,
+            history: '',
+            labResults: '',
+            diagnosis: '',
+            outcome: f.outcome.value,
+            notes: '',
+          };
+          cases.push(newC);
+          alert('Case created');
+          document.querySelector('.nav-link[data-section="cases"]').click();
+        };
+      }
+
+      // --- About Section ---
+      function renderAbout() {
+        content.innerHTML = `<h2>About</h2>
+          <p>This is MEDU Case Vault with admin features.</p>`;h
+      }
+
+      // --- Init default ---
+      renderSection('cases');
+
+    })();
+  </script>
+</body>
+</html>
