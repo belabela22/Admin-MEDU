@@ -46,7 +46,7 @@
     }
 
     /* Container */
-    #app, #loginPage {
+    #app, #loginPage, #memberLoginPage {
       max-width: 1300px;
       margin: 1rem auto;
       background: rgba(255, 255, 255, 0.05);
@@ -186,7 +186,7 @@
       display: inline-block;
       min-width: 60px;
     }
-    .badge.solved {
+    .badge.solved, .badge.resolved {
       background: #34c759;
       box-shadow: 0 0 10px #32d858aa;
     }
@@ -194,10 +194,31 @@
       background: #ff3b30;
       box-shadow: 0 0 10px #ff4a3daa;
     }
-    .badge.pending {
+    .badge.pending, .badge.in-progress {
       background: #ffcc00;
       color: #222;
       box-shadow: 0 0 10px #ffdd44aa;
+    }
+
+    /* Progress bar */
+    .progress-bar-container {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 1rem 0;
+      box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
+    }
+    .progress-bar {
+      height: 20px;
+      background: linear-gradient(90deg, #34c759, #4a83ff);
+      transition: width 0.5s ease;
+      text-align: right;
+      padding-right: 10px;
+      color: white;
+      font-weight: 600;
+      font-size: 0.9rem;
+      line-height: 20px;
     }
 
     /* Filters and search */
@@ -333,7 +354,7 @@
     }
 
     /* Forms */
-    form.new-case-form, form.feedback-form, form.edit-case-form, form.login-form {
+    form.new-case-form, form.feedback-form, form.edit-case-form, form.login-form, form.task-form, form.ticket-form {
       max-width: 650px;
       margin: 0 auto;
     }
@@ -381,6 +402,27 @@
     }
     form button.delete-btn:hover {
       background: #ff5550;
+    }
+
+    /* Star rating */
+    .star-rating {
+      display: flex;
+      gap: 0.3rem;
+      margin-bottom: 1rem;
+    }
+    .star-rating input {
+      display: none;
+    }
+    .star-rating label {
+      font-size: 1.5rem;
+      color: #ccc;
+      cursor: pointer;
+      transition: color 0.3s ease;
+    }
+    .star-rating label:hover,
+    .star-rating label:hover ~ label,
+    .star-rating input:checked ~ label {
+      color: #ffcc00;
     }
 
     /* Notification Toast */
@@ -530,7 +572,7 @@
   </style>
 </head>
 <body>
-  <!-- Login Page -->
+  <!-- Admin Login Page -->
   <div id="loginPage" style="display: none;">
     <div class="login-container">
       <h2>Admin Login</h2>
@@ -541,6 +583,25 @@
         <label for="password">Password</label>
         <input type="password" id="password" name="password" required placeholder="Enter password" autocomplete="current-password" />
         <button type="submit" class="submit-btn">Login</button>
+        <p style="text-align: center; margin-top: 1rem;">
+          <a href="#" id="switchToMemberLogin">Login as Member</a>
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Member Login Page -->
+  <div id="memberLoginPage" style="display: none;">
+    <div class="login-container">
+      <h2>Member Login</h2>
+      <div class="error-message" id="memberLoginError">Please enter a valid name</div>
+      <form class="login-form" aria-label="Member login form">
+        <label for="memberName">Name</label>
+        <input type="text" id="memberName" name="memberName" required placeholder="Enter your name" autocomplete="name" />
+        <button type="submit" class="submit-btn">Login</button>
+        <p style="text-align: center; margin-top: 1rem;">
+          <a href="#" id="switchToAdminLogin">Login as Admin</a>
+        </p>
       </form>
     </div>
   </div>
@@ -564,18 +625,21 @@
         <a href="#" class="nav-link active" data-section="dashboard">Dashboard</a>
         <a href="#" class="nav-link" data-section="cases">Cases</a>
         <a href="#" class="nav-link" data-section="newcase">New Case</a>
+        <a href="#" class="nav-link" data-section="tickets">Tickets</a>
+        <a href="#" class="nav-link" data-section="tasks">Tasks</a>
         <a href="#" class="nav-link" data-section="feedback">Feedback</a>
+        <a href="#" class="nav-link" data-section="members">Members</a>
         <a href="#" class="nav-link" data-section="about">About</a>
       </nav>
       <section class="content" id="content"></section>
     </main>
   </div>
 
-  <!-- Case Detail/Edit Modal -->
-  <div class="modal" id="caseModal" aria-hidden="true" role="dialog" aria-labelledby="modalTitle">
+  <!-- Case/Ticket/Task Detail/Edit Modal -->
+  <div class="modal" id="itemModal" aria-hidden="true" role="dialog" aria-labelledby="modalTitle">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 id="modalTitle">Case Details</h2>
+        <h2 id="modalTitle">Details</h2>
         <button class="close-btn" aria-label="Close modal" id="modalClose">×</button>
       </div>
       <div id="modalBody"></div>
@@ -594,6 +658,7 @@
           title: "Pediatric Ethical Dilemma",
           type: "Ethical",
           status: "Open",
+          creator: "Dr. Smith",
           assignedTo: "Dr. Smith",
           lastUpdated: "2025-07-05",
           symptoms: "Parental refusal of treatment in a minor",
@@ -608,6 +673,7 @@
           title: "ER Trauma Case",
           type: "Emergency",
           status: "Solved",
+          creator: "Dr. Lee",
           assignedTo: "Dr. Lee",
           lastUpdated: "2025-06-25",
           symptoms: "Severe head trauma, unconscious",
@@ -622,6 +688,7 @@
           title: "Pediatric Fever Evaluation",
           type: "Pediatrics",
           status: "Pending",
+          creator: "Dr. Chen",
           assignedTo: "Dr. Chen",
           lastUpdated: "2025-07-01",
           symptoms: "Fever, rash, irritability",
@@ -633,18 +700,57 @@
         }
       ];
 
+      const initialTickets = [
+        {
+          id: "TCK-001",
+          title: "Lab Equipment Issue",
+          description: "Malfunctioning centrifuge in lab",
+          status: "Open",
+          creator: "Dr. Smith",
+          lastUpdated: "2025-07-06"
+        },
+        {
+          id: "TCK-002",
+          title: "Patient Record Error",
+          description: "Incorrect data entry in patient file",
+          status: "Resolved",
+          creator: "Dr. Lee",
+          lastUpdated: "2025-07-04"
+        }
+      ];
+
+      const initialTasks = [
+        {
+          id: "TSK-001",
+          title: "Review Patient Charts",
+          description: "Review charts for upcoming audit",
+          status: "Open",
+          creator: "Dr. Smith",
+          lastUpdated: "2025-07-06",
+          rating: 0,
+          feedback: ""
+        }
+      ];
+
       // State management
       let cases = JSON.parse(localStorage.getItem('cases')) || initialCases;
+      let tickets = JSON.parse(localStorage.getItem('tickets')) || initialTickets;
+      let tasks = JSON.parse(localStorage.getItem('tasks')) || initialTasks;
       let feedbackList = JSON.parse(localStorage.getItem('feedbackList')) || [];
+      let members = JSON.parse(localStorage.getItem('members')) || [];
+      let notifications = JSON.parse(localStorage.getItem('notifications')) || [];
       let filteredCases = [...cases];
+      let filteredTickets = [...tickets];
+      let filteredTasks = [...tasks];
       let currentSort = { col: null, asc: true };
-      let isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+      let user = JSON.parse(localStorage.getItem('user')) || { role: null, name: null };
 
       // DOM elements
       const app = document.getElementById('app');
       const loginPage = document.getElementById('loginPage');
+      const memberLoginPage = document.getElementById('memberLoginPage');
       const content = document.getElementById('content');
-      const modal = document.getElementById('caseModal');
+      const modal = document.getElementById('itemModal');
       const modalTitle = document.getElementById('modalTitle');
       const modalBody = document.getElementById('modalBody');
       const modalClose = document.getElementById('modalClose');
@@ -664,19 +770,34 @@
 
       // Authentication check
       function checkAuth() {
-        if (!isAuthenticated) {
+        if (!user.role) {
           app.style.display = 'none';
           loginPage.style.display = 'block';
-          renderLogin();
+          memberLoginPage.style.display = 'none';
+          renderAdminLogin();
         } else {
           app.style.display = 'flex';
           loginPage.style.display = 'none';
+          memberLoginPage.style.display = 'none';
+          updateNavLinks();
           activateSection('dashboard');
         }
       }
 
-      // Login form rendering
-      function renderLogin() {
+      // Update navigation based on user role
+      function updateNavLinks() {
+        navLinks.forEach(link => {
+          const section = link.dataset.section;
+          if (user.role === 'member' && (section === 'members' || section === 'feedback')) {
+            link.style.display = 'none';
+          } else {
+            link.style.display = 'block';
+          }
+        });
+      }
+
+      // Admin login
+      function renderAdminLogin() {
         const form = loginPage.querySelector('.login-form');
         const errorMessage = document.getElementById('loginError');
         form.addEventListener('submit', e => {
@@ -684,10 +805,11 @@
           const username = form.username.value.trim();
           const password = form.password.value.trim();
           if (username === 'Luna.C.Everly' && password === 'lunamedudirector') {
-            isAuthenticated = true;
-            localStorage.setItem('isAuthenticated', 'true');
+            user = { role: 'admin', name: 'Luna.C.Everly' };
+            localStorage.setItem('user', JSON.stringify(user));
             app.style.display = 'flex';
             loginPage.style.display = 'none';
+            updateNavLinks();
             activateSection('dashboard');
             form.reset();
             errorMessage.classList.remove('active');
@@ -695,15 +817,52 @@
             errorMessage.classList.add('active');
           }
         });
+        document.getElementById('switchToMemberLogin').addEventListener('click', e => {
+          e.preventDefault();
+          loginPage.style.display = 'none';
+          memberLoginPage.style.display = 'block';
+          renderMemberLogin();
+        });
+      }
+
+      // Member login
+      function renderMemberLogin() {
+        const form = memberLoginPage.querySelector('.login-form');
+        const errorMessage = document.getElementById('memberLoginError');
+        form.addEventListener('submit', e => {
+          e.preventDefault();
+          const name = form.memberName.value.trim();
+          if (!name || members.includes(name)) {
+            errorMessage.textContent = members.includes(name) ? 'Name already in use' : 'Please enter a valid name';
+            errorMessage.classList.add('active');
+            return;
+          }
+          members.push(name);
+          localStorage.setItem('members', JSON.stringify(members));
+          user = { role: 'member', name };
+          localStorage.setItem('user', JSON.stringify(user));
+          app.style.display = 'flex';
+          memberLoginPage.style.display = 'none';
+          updateNavLinks();
+          activateSection('dashboard');
+          form.reset();
+          errorMessage.classList.remove('active');
+        });
+        document.getElementById('switchToAdminLogin').addEventListener('click', e => {
+          e.preventDefault();
+          memberLoginPage.style.display = 'none';
+          loginPage.style.display = 'block';
+          renderAdminLogin();
+        });
       }
 
       // Logout
       logoutBtn.addEventListener('click', () => {
-        isAuthenticated = false;
-        localStorage.removeItem('isAuthenticated');
+        user = { role: null, name: null };
+        localStorage.setItem('user', JSON.stringify(user));
         app.style.display = 'none';
         loginPage.style.display = 'block';
-        renderLogin();
+        renderAdminLogin();
       });
 
       // Dark mode toggle
@@ -718,34 +877,113 @@
         darkModeToggle.textContent = document.body.classList.contains('dark-mode') ? '☀️ Light Mode' : '🌙 Dark Mode';
       });
 
+      // Calculate performance
+      function calculatePerformance(memberName = null) {
+        const totalCases = cases.length;
+        const completedCases = cases.filter(c => c.status === 'Solved').length;
+        const totalTickets = tickets.length;
+        const completedTickets = tickets.filter(t => t.status === 'Resolved').length;
+        const totalTasks = tasks.length;
+        const completedTasks = tasks.filter(t => t.status === 'Completed').length;
+        const totalFeedback = feedbackList.length;
+        const totalItems = totalCases + totalTickets + totalTasks;
+        const completedItems = completedCases + completedTickets + completedTasks;
+
+        if (memberName) {
+          const memberCases = cases.filter(c => c.creator === memberName);
+          const memberCompletedCases = memberCases.filter(c => c.status === 'Solved').length;
+          const memberTickets = tickets.filter(t => t.creator === memberName);
+          const memberCompletedTickets = memberTickets.filter(t => t.status === 'Resolved').length;
+          const memberTasks = tasks.filter(t => t.creator === memberName);
+          const memberCompletedTasks = memberTasks.filter(t => t.status === 'Completed').length;
+          const memberFeedback = feedbackList.filter(f => cases.find(c => c.id === f.caseId)?.creator === memberName).length;
+          const memberItems = memberCases.length + memberTickets.length + memberTasks.length;
+          const memberCompletedItems = memberCompletedCases + memberCompletedTickets + memberCompletedTasks;
+          const ratingSum = tasks.filter(t => t.creator === memberName).reduce((sum, t) => sum + t.rating, 0);
+          const ratedTasks = tasks.filter(t => t.creator === memberName && t.rating > 0).length;
+          const avgRating = ratedTasks ? (ratingSum / ratedTasks).toFixed(1) : 0;
+          return {
+            completion: memberItems ? Math.round((memberCompletedItems / memberItems) * 100) : 0,
+            contributions: memberItems,
+            feedback: memberFeedback,
+            avgRating
+          };
+        }
+
+        return {
+          overall: totalItems ? Math.round((completedItems / totalItems) * 100) : 0,
+          caseCompletion: totalCases ? Math.round((completedCases / totalCases) * 100) : 0,
+          ticketCompletion: totalTickets ? Math.round((completedTickets / totalTickets) * 100) : 0,
+          taskCompletion: totalTasks ? Math.round((completedTasks / totalTasks) * 100) : 0,
+          feedbackCount: totalFeedback
+        };
+      }
+
       // Render dashboard
       function renderDashboard() {
-        const stats = {
-          total: cases.length,
-          open: cases.filter(c => c.status === 'Open').length,
-          pending: cases.filter(c => c.status === 'Pending').length,
-          solved: cases.filter(c => c.status === 'Solved').length
-        };
+        const performance = calculatePerformance();
+        const memberPerformance = user.role === 'admin' ? members.map(m => ({
+          name: m,
+          ...calculatePerformance(m)
+        })) : user.role === 'member' ? [{
+          name: user.name,
+          ...calculatePerformance(user.name)
+        }] : [];
         content.innerHTML = `
-          <h2>Admin Dashboard</h2>
+          <h2>${user.role === 'admin' ? 'Admin' : 'Member'} Dashboard</h2>
           <div class="stats-grid">
             <div class="stat-card">
               <h3>Total Cases</h3>
-              <p>${stats.total}</p>
+              <p>${cases.length}</p>
             </div>
             <div class="stat-card">
               <h3>Open Cases</h3>
-              <p>${stats.open}</p>
+              <p>${cases.filter(c => c.status === 'Open').length}</p>
             </div>
             <div class="stat-card">
               <h3>Pending Cases</h3>
-              <p>${stats.pending}</p>
+              <p>${cases.filter(c => c.status === 'Pending').length}</p>
             </div>
             <div class="stat-card">
               <h3>Solved Cases</h3>
-              <p>${stats.solved}</p>
+              <p>${cases.filter(c => c.status === 'Solved').length}</p>
+            </div>
+            <div class="stat-card">
+              <h3>Total Tickets</h3>
+              <p>${tickets.length}</p>
+            </div>
+            <div class="stat-card">
+              <h3>Resolved Tickets</h3>
+              <p>${tickets.filter(t => t.status === 'Resolved').length}</p>
+            </div>
+            <div class="stat-card">
+              <h3>Total Tasks</h3>
+              <p>${tasks.length}</p>
+            </div>
+            <div class="stat-card">
+              <h3>Completed Tasks</h3>
+              <p>${tasks.filter(t => t.status === 'Completed').length}</p>
             </div>
           </div>
+          <h3>Overall Performance</h3>
+          <div class="progress-bar-container">
+            <div class="progress-bar" style="width: ${performance.overall}%">${performance.overall}%</div>
+          </div>
+          ${user.role === 'admin' || user.role === 'member' ? `
+            <h3>${user.role === 'admin' ? 'Member Performance' : 'Your Performance'}</h3>
+            ${memberPerformance.map(mp => `
+              <div class="stat-card">
+                <h3>${mp.name}</h3>
+                <p>Completion: ${mp.completion}%</p>
+                <p>Contributions: ${mp.contributions}</p>
+                <p>Feedback Received: ${mp.feedback}</p>
+                <p>Avg Task Rating: ${mp.avgRating}/5</p>
+                <div class="progress-bar-container">
+                  <div class="progress-bar" style="width: ${mp.completion}%">${mp.completion}%</div>
+                </div>
+              </div>
+            `).join('')}
+          ` : ''}
           <h3>Recent Cases</h3>
           <table aria-label="Recent cases table" role="grid" id="casesTable" tabindex="0">
             <thead>
@@ -758,7 +996,7 @@
             </thead>
             <tbody>
               ${cases.slice(0, 5).map(c => `
-                <tr tabindex="0" role="row" data-id="${c.id}">
+                <tr tabindex="0" role="row" data-id="${c.id}" data-type="case">
                   <td data-label="Case ID">${c.id}</td>
                   <td data-label="Title">${c.title}</td>
                   <td data-label="Type">${c.type}</td>
@@ -767,8 +1005,17 @@
               `).join('')}
             </tbody>
           </table>
+          <h3>Your Notifications</h3>
+          <div id="userNotifications">
+            ${notifications.filter(n => n.recipient === user.name).map(n => `
+              <div class="modal-section">
+                <p>${n.message}</p>
+                <small>${new Date(n.timestamp).toLocaleString()}</small>
+              </div>
+            `).join('') || '<p>No notifications.</p>'}
+          </div>
         `;
-        addTableEventListeners();
+        addTableEventListeners('case');
       }
 
       // Render case table
@@ -803,17 +1050,19 @@
                 <th scope="col">Title <button class="sort-btn" data-col="title">↑↓</button></th>
                 <th scope="col">Type <button class="sort-btn" data-col="type">↑↓</button></th>
                 <th scope="col">Status <button class="sort-btn" data-col="status">↑↓</button></th>
+                <th scope="col">Creator <button class="sort-btn" data-col="creator">↑↓</button></th>
                 <th scope="col">Assigned To <button class="sort-btn" data-col="assignedTo">↑↓</button></th>
                 <th scope="col">Last Updated <button class="sort-btn" data-col="lastUpdated">↑↓</button></th>
               </tr>
             </thead>
             <tbody>
               ${filteredCases.map(c => `
-                <tr tabindex="0" role="row" data-id="${c.id}">
+                <tr tabindex="0" role="row" data-id="${c.id}" data-type="case">
                   <td data-label="Case ID">${c.id}</td>
                   <td data-label="Title">${c.title}</td>
                   <td data-label="Type">${c.type}</td>
                   <td data-label="Status"><span class="badge ${c.status.toLowerCase()}">${c.status}</span></td>
+                  <td data-label="Creator">${c.creator}</td>
                   <td data-label="Assigned To">${c.assignedTo}</td>
                   <td data-label="Last Updated">${c.lastUpdated}</td>
                 </tr>
@@ -821,35 +1070,208 @@
             </tbody>
           </table>
         `;
-        addTableEventListeners();
+        addTableEventListeners('case');
+      }
+
+      // Render tickets table
+      function renderTicketsTable() {
+        const performance = calculatePerformance();
+        content.innerHTML = `
+          <h2>Tickets</h2>
+          <div class="progress-bar-container">
+            <div class="progress-bar" style="width: ${performance.ticketCompletion}%">${performance.ticketCompletion}% Resolved</div>
+          </div>
+          <div class="filters" aria-label="Filter tickets">
+            <label for="ticketSearchInput">Search:
+              <input type="search" id="ticketSearchInput" placeholder="Search by title or ID" aria-label="Search tickets" />
+            </label>
+            <label for="ticketStatusFilter">Status:
+              <select id="ticketStatusFilter" aria-label="Filter by ticket status">
+                <option value="all">All</option>
+                <option value="Open">Open</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Resolved">Resolved</option>
+              </select>
+            </label>
+          </div>
+          <table aria-label="Tickets table" role="grid" id="ticketsTable" tabindex="0">
+            <thead>
+              <tr>
+                <th scope="col">Ticket ID <button class="sort-btn" data-col="id">↑↓</button></th>
+                <th scope="col">Title <button class="sort-btn" data-col="title">↑↓</button></th>
+                <th scope="col">Status <button class="sort-btn" data-col="status">↑↓</button></th>
+                <th scope="col">Creator <button class="sort-btn" data-col="creator">↑↓</button></th>
+                <th scope="col">Last Updated <button class="sort-btn" data-col="lastUpdated">↑↓</button></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredTickets.map(t => `
+                <tr tabindex="0" role="row" data-id="${t.id}" data-type="ticket">
+                  <td data-label="Ticket ID">${t.id}</td>
+                  <td data-label="Title">${t.title}</td>
+                  <td data-label="Status"><span class="badge ${t.status.toLowerCase().replace(' ', '-')}">${t.status}</span></td>
+                  <td data-label="Creator">${t.creator}</td>
+                  <td data-label="Last Updated">${t.lastUpdated}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          ${user.role === 'member' ? `
+            <h3>Create New Ticket</h3>
+            <form class="ticket-form" aria-label="New ticket form">
+              <label for="ticketTitle">Ticket Title</label>
+              <input type="text" id="ticketTitle" name="ticketTitle" required placeholder="Enter ticket title" maxlength="100" />
+              <label for="ticketDescription">Description</label>
+              <textarea id="ticketDescription" name="ticketDescription" required placeholder="Describe the issue"></textarea>
+              <button type="submit" class="submit-btn">Submit Ticket</button>
+            </form>
+          ` : ''}
+        `;
+        addTableEventListeners('ticket');
+        if (user.role === 'member') {
+          const form = content.querySelector('.ticket-form');
+          form.addEventListener('submit', e => {
+            e.preventDefault();
+            const newTicket = {
+              id: `TCK-${(tickets.length + 1).toString().padStart(3, '0')}`,
+              title: form.ticketTitle.value.trim(),
+              description: form.ticketDescription.value.trim(),
+              status: 'Open',
+              creator: user.name,
+              lastUpdated: new Date().toISOString().split('T')[0]
+            };
+            if (!newTicket.title || !newTicket.description) {
+              showNotification('Please fill in all required fields.', 'error');
+              return;
+            }
+            tickets.push(newTicket);
+            localStorage.setItem('tickets', JSON.stringify(tickets));
+            filteredTickets = [...tickets];
+            form.reset();
+            showNotification(`New ticket ${newTicket.id} added!`);
+            renderTicketsTable();
+          });
+        }
+      }
+
+      // Render tasks table
+      function renderTasksTable() {
+        content.innerHTML = `
+          <h2>Tasks</h2>
+          <div class="filters" aria-label="Filter tasks">
+            <label for="taskSearchInput">Search:
+              <input type="search" id="taskSearchInput" placeholder="Search by title or ID" aria-label="Search tasks" />
+            </label>
+            <label for="taskStatusFilter">Status:
+              <select id="taskStatusFilter" aria-label="Filter by task status">
+                <option value="all">All</option>
+                <option value="Open">Open</option>
+                <option value="Completed">Completed</option>
+              </select>
+            </label>
+          </div>
+          <table aria-label="Tasks table" role="grid" id="tasksTable" tabindex="0">
+            <thead>
+              <tr>
+                <th scope="col">Task ID <button class="sort-btn" data-col="id">↑↓</button></th>
+                <th scope="col">Title <button class="sort-btn" data-col="title">↑↓</button></th>
+                <th scope="col">Status <button class="sort-btn" data-col="status">↑↓</button></th>
+                <th scope="col">Creator <button class="sort-btn" data-col="creator">↑↓</button></th>
+                <th scope="col">Rating</th>
+                <th scope="col">Last Updated <button class="sort-btn" data-col="lastUpdated">↑↓</button></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredTasks.map(t => `
+                <tr tabindex="0" role="row" data-id="${t.id}" data-type="task">
+                  <td data-label="Task ID">${t.id}</td>
+                  <td data-label="Title">${t.title}</td>
+                  <td data-label="Status"><span class="badge ${t.status.toLowerCase()}">${t.status}</span></td>
+                  <td data-label="Creator">${t.creator}</td>
+                  <td data-label="Rating">${'★'.repeat(t.rating)}${'☆'.repeat(5 - t.rating)}</td>
+                  <td data-label="Last Updated">${t.lastUpdated}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          ${user.role === 'member' ? `
+            <h3>Create New Task</h3>
+            <form class="task-form" aria-label="New task form">
+              <label for="taskTitle">Task Title</label>
+              <input type="text" id="taskTitle" name="taskTitle" required placeholder="Enter task title" maxlength="100" />
+              <label for="taskDescription">Description</label>
+              <textarea id="taskDescription" name="taskDescription" required placeholder="Describe the task"></textarea>
+              <button type="submit" class="submit-btn">Submit Task</button>
+            </form>
+          ` : ''}
+        `;
+        addTableEventListeners('task');
+        if (user.role === 'member') {
+          const form = content.querySelector('.task-form');
+          form.addEventListener('submit', e => {
+            e.preventDefault();
+            const newTask = {
+              id: `TSK-${(tasks.length + 1).toString().padStart(3, '0')}`,
+              title: form.taskTitle.value.trim(),
+              description: form.taskDescription.value.trim(),
+              status: 'Open',
+              creator: user.name,
+              lastUpdated: new Date().toISOString().split('T')[0],
+              rating: 0,
+              feedback: ''
+            };
+            if (!newTask.title || !newTask.description) {
+              showNotification('Please fill in all required fields.', 'error');
+              return;
+            }
+            tasks.push(newTask);
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            filteredTasks = [...tasks];
+            form.reset();
+            showNotification(`New task ${newTask.id} added!`);
+            renderTasksTable();
+          });
+        }
       }
 
       // Add table event listeners
-      function addTableEventListeners() {
+      function addTableEventListeners(type) {
         const sortButtons = document.querySelectorAll('.sort-btn');
         sortButtons.forEach(btn => {
           btn.addEventListener('click', () => {
             currentSort.col = btn.dataset.col;
             currentSort.asc = currentSort.col === btn.dataset.col ? !currentSort.asc : true;
-            sortCases();
-            renderCasesTable();
+            if (type === 'case') sortCases();
+            else if (type === 'ticket') sortTickets();
+            else if (type === 'task') sortTasks();
+            if (type === 'case') renderCasesTable();
+            else if (type === 'ticket') renderTicketsTable();
+            else if (type === 'task') renderTasksTable();
           });
         });
-        document.getElementById('searchInput')?.addEventListener('input', applyFilters);
-        document.getElementById('typeFilter')?.addEventListener('change', applyFilters);
-        document.getElementById('statusFilter')?.addEventListener('change', applyFilters);
-        document.querySelectorAll('tbody tr').forEach(row => {
-          row.addEventListener('click', () => openCaseModal(row.dataset.id));
+        if (type === 'case') {
+          document.getElementById('searchInput')?.addEventListener('input', applyCaseFilters);
+          document.getElementById('typeFilter')?.addEventListener('change', applyCaseFilters);
+          document.getElementById('statusFilter')?.addEventListener('change', applyCaseFilters);
+        } else if (type === 'ticket') {
+          document.getElementById('ticketSearchInput')?.addEventListener('input', applyTicketFilters);
+          document.getElementById('ticketStatusFilter')?.addEventListener('change', applyTicketFilters);
+        } else if (type === 'task') {
+          document.getElementById('taskSearchInput')?.addEventListener('input', applyTaskFilters);
+          document.getElementById('taskStatusFilter')?.addEventListener('change', applyTaskFilters);
+        }
+        document.querySelectorAll(`#${type}sTable tbody tr`).forEach(row => {
+          row.addEventListener('click', () => openItemModal(row.dataset.id, row.dataset.type));
           row.addEventListener('keypress', e => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
-              openCaseModal(row.dataset.id);
+              openItemModal(row.dataset.id, row.dataset.type);
             }
           });
         });
       }
 
-      // Sort cases
+      // Sort functions
       function sortCases() {
         if (!currentSort.col) return;
         filteredCases.sort((a, b) => {
@@ -866,8 +1288,40 @@
         });
       }
 
+      function sortTickets() {
+        if (!currentSort.col) return;
+        filteredTickets.sort((a, b) => {
+          let valA = a[currentSort.col];
+          let valB = b[currentSort.col];
+          if (currentSort.col === 'lastUpdated') {
+            valA = new Date(valA);
+            valB = new Date(valB);
+          } else {
+            valA = valA.toString().toLowerCase();
+            valB = valB.toString().toLowerCase();
+          }
+          return currentSort.asc ? (valA < valB ? -1 : 1) : (valA < valB ? 1 : -1);
+        });
+      }
+
+      function sortTasks() {
+        if (!currentSort.col) return;
+        filteredTasks.sort((a, b) => {
+          let valA = a[currentSort.col];
+          let valB = b[currentSort.col];
+          if (currentSort.col === 'lastUpdated') {
+            valA = new Date(valA);
+            valB = new Date(valB);
+          } else {
+            valA = valA.toString().toLowerCase();
+            valB = valB.toString().toLowerCase();
+          }
+          return currentSort.asc ? (valA < valB ? -1 : 1) : (valA < valB ? 1 : -1);
+        });
+      }
+
       // Apply filters
-      function applyFilters() {
+      function applyCaseFilters() {
         const searchVal = document.getElementById('searchInput')?.value.toLowerCase() || '';
         const typeVal = document.getElementById('typeFilter')?.value || 'all';
         const statusVal = document.getElementById('statusFilter')?.value || 'all';
@@ -881,126 +1335,269 @@
         renderCasesTable();
       }
 
-      // Open case modal (view/edit)
-      function openCaseModal(id, editMode = false) {
-        const caseData = cases.find(c => c.id === id);
-        if (!caseData) return;
-        modalTitle.textContent = editMode ? `Edit Case: ${caseData.id}` : `${caseData.id} - ${caseData.title}`;
-        modalBody.innerHTML = editMode ? `
-          <form class="edit-case-form" aria-label="Edit case form">
-            <label for="editTitle">Case Title</label>
-            <input type="text" id="editTitle" name="title" value="${caseData.title}" required maxlength="100" />
-            <label for="editType">Case Type</label>
-            <select id="editType" name="type" required>
-              <option value="Ethical" ${caseData.type === 'Ethical' ? 'selected' : ''}>Ethical</option>
-              <option value="Emergency" ${caseData.type === 'Emergency' ? 'selected' : ''}>Emergency</option>
-              <option value="Pediatrics" ${caseData.type === 'Pediatrics' ? 'selected' : ''}>Pediatrics</option>
-            </select>
-            <label for="editStatus">Status</label>
-            <select id="editStatus" name="status" required>
-              <option value="Open" ${caseData.status === 'Open' ? 'selected' : ''}>Open</option>
-              <option value="Pending" ${caseData.status === 'Pending' ? 'selected' : ''}>Pending</option>
-              <option value="Solved" ${caseData.status === 'Solved' ? 'selected' : ''}>Solved</option>
-            </select>
-            <label for="editAssignedTo">Assigned To</label>
-            <input type="text" id="editAssignedTo" name="assignedTo" value="${caseData.assignedTo}" required maxlength="50" />
-            <label for="editSymptoms">Symptoms</label>
-            <textarea id="editSymptoms" name="symptoms" required>${caseData.symptoms}</textarea>
-            <label for="editHistory">History</label>
-            <textarea id="editHistory" name="history" required>${caseData.history}</textarea>
-            <label for="editLabResults">Lab Results</label>
-            <textarea id="editLabResults" name="labResults">${caseData.labResults}</textarea>
-            <label for="editDiagnosis">Diagnosis</label>
-            <textarea id="editDiagnosis" name="diagnosis">${caseData.diagnosis}</textarea>
-            <label for="editOutcome">Outcome</label>
-            <textarea id="editOutcome" name="outcome">${caseData.outcome}</textarea>
-            <label for="editNotes">Notes</label>
-            <textarea id="editNotes" name="notes">${caseData.notes}</textarea>
-            <div style="display: flex; gap: 1rem;">
-              <button type="submit" class="submit-btn">Save Changes</button>
-              <button type="button" class="delete-btn" id="deleteCaseBtn">Delete Case</button>
-            </div>
-          </form>
-        ` : `
-          <div class="modal-section"><h3>Symptoms</h3><p>${caseData.symptoms}</p></div>
-          <div class="modal-section"><h3>History</h3><p>${caseData.history}</p></div>
-          <div class="modal-section"><h3>Lab Results</h3><p>${caseData.labResults || 'N/A'}</p></div>
-          <div class="modal-section"><h3>Diagnosis</h3><p>${caseData.diagnosis || 'N/A'}</p></div>
-          <div class="modal-section"><h3>Outcome</h3><p>${caseData.outcome || 'N/A'}</p></div>
-          <div class="modal-section"><h3>Notes</h3><p>${caseData.notes || 'No notes'}</p></div>
-          <button class="submit-btn" id="editCaseBtn" style="margin-bottom: 1rem;">Edit Case</button>
-          <form class="feedback-form" aria-label="Case feedback form">
-            <label for="feedbackText">Submit Feedback</label>
-            <textarea id="feedbackText" name="feedbackText" rows="4" required placeholder="Enter your feedback..."></textarea>
-            <button type="submit" class="submit-btn">Submit Feedback</button>
-          </form>
-        `;
-        modal.classList.add('active');
-        modal.setAttribute('aria-hidden', 'false');
+      function applyTicketFilters() {
+        const searchVal = document.getElementById('ticketSearchInput')?.value.toLowerCase() || '';
+        const statusVal = document.getElementById('ticketStatusFilter')?.value || 'all';
+        filteredTickets = tickets.filter(t => {
+          const matchesSearch = t.title.toLowerCase().includes(searchVal) || t.id.toLowerCase().includes(searchVal);
+          const matchesStatus = statusVal === 'all' || t.status === statusVal;
+          return matchesSearch && matchesStatus;
+        });
+        sortTickets();
+        renderTicketsTable();
+      }
 
-        if (editMode) {
-          const form = modalBody.querySelector('.edit-case-form');
+      function applyTaskFilters() {
+        const searchVal = document.getElementById('taskSearchInput')?.value.toLowerCase() || '';
+        const statusVal = document.getElementById('taskStatusFilter')?.value || 'all';
+        filteredTasks = tasks.filter(t => {
+          const matchesSearch = t.title.toLowerCase().includes(searchVal) || t.id.toLowerCase().includes(searchVal);
+          const matchesStatus = statusVal === 'all' || t.status === statusVal;
+          return matchesSearch && matchesStatus;
+        });
+        sortTasks();
+        renderTasksTable();
+      }
+
+      // Open item modal (case/ticket/task)
+      function openItemModal(id, type, editMode = false) {
+        let item, titlePrefix, dataFields;
+        if (type === 'case') {
+          item = cases.find(c => c.id === id);
+          titlePrefix = 'Case';
+          dataFields = ['symptoms', 'history', 'labResults', 'diagnosis', 'outcome', 'notes'];
+        } else if (type === 'ticket') {
+          item = tickets.find(t => t.id === id);
+          titlePrefix = 'Ticket';
+          dataFields = ['description'];
+        } else if (type === 'task') {
+          item = tasks.find(t => t.id === id);
+          titlePrefix = 'Task';
+          dataFields = ['description', 'feedback'];
+        }
+        if (!item) return;
+
+        modalTitle.textContent = editMode ? `Edit ${titlePrefix}: ${item.id}` : `${titlePrefix}: ${item.id} - ${item.title}`;
+        if (editMode && user.role === 'admin') {
+          if (type === 'case') {
+            modalBody.innerHTML = `
+              <form class="edit-case-form" aria-label="Edit case form">
+                <label for="editTitle">Case Title</label>
+                <input type="text" id="editTitle" name="title" value="${item.title}" required maxlength="100" />
+                <label for="editType">Case Type</label>
+                <select id="editType" name="type" required>
+                  <option value="Ethical" ${item.type === 'Ethical' ? 'selected' : ''}>Ethical</option>
+                  <option value="Emergency" ${item.type === 'Emergency' ? 'selected' : ''}>Emergency</option>
+                  <option value="Pediatrics" ${item.type === 'Pediatrics' ? 'selected' : ''}>Pediatrics</option>
+                </select>
+                <label for="editStatus">Status</label>
+                <select id="editStatus" name="status" required>
+                  <option value="Open" ${item.status === 'Open' ? 'selected' : ''}>Open</option>
+                  <option value="Pending" ${item.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                  <option value="Solved" ${item.status === 'Solved' ? 'selected' : ''}>Solved</option>
+                </select>
+                <label for="editAssignedTo">Assigned To</label>
+                <input type="text" id="editAssignedTo" name="assignedTo" value="${item.assignedTo}" required maxlength="50" />
+                <label for="editSymptoms">Symptoms</label>
+                <textarea id="editSymptoms" name="symptoms" required>${item.symptoms}</textarea>
+                <label for="editHistory">History</label>
+                <textarea id="editHistory" name="history" required>${item.history}</textarea>
+                <label for="editLabResults">Lab Results</label>
+                <textarea id="editLabResults" name="labResults">${item.labResults}</textarea>
+                <label for="editDiagnosis">Diagnosis</label>
+                <textarea id="editDiagnosis" name="diagnosis">${item.diagnosis}</textarea>
+                <label for="editOutcome">Outcome</label>
+                <textarea id="editOutcome" name="outcome">${item.outcome}</textarea>
+                <label for="editNotes">Notes</label>
+                <textarea id="editNotes" name="notes">${item.notes}</textarea>
+                <div style="display: flex; gap: 1rem;">
+                  <button type="submit" class="submit-btn">Save Changes</button>
+                  <button type="button" class="submit-btn" id="deleteItemBtn">Delete Case</button>
+                </div>
+              </form>
+            `;
+          } else if (type === 'ticket') {
+            modalBody.innerHTML = `
+              <form class="edit-ticket-form" aria-label="Edit ticket form">
+                <label for="editTitle">Ticket Title</label>
+                <input type="text" id="editTitle" name="title" value="${item.title}" required maxlength="100" />
+                <label for="editDescription">Description</label>
+                <textarea id="editDescription" name="description" required>${item.description}</textarea>
+                <label for="editStatus">Status</label>
+                <select id="editStatus" name="status" required>
+                  <option value="Open" ${item.status === 'Open' ? 'selected' : ''}>Open</option>
+                  <option value="In Progress" ${item.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                  <option value="Resolved" ${item.status === 'Resolved' ? 'selected' : ''}>Resolved</option>
+                </select>
+                <div style="display: flex; gap: 1rem;">
+                  <button type="submit" class="submit-btn">Save Changes</button>
+                  <button type="button" class="submit-btn" id="deleteItemBtn">Delete Ticket</button>
+                </div>
+              </form>
+            `;
+          } else if (type === 'task') {
+            modalBody.innerHTML = `
+              <form class="edit-task-form" aria-label="Edit task form">
+                <label for="editTitle">Task Title</label>
+                <input type="text" id="editTitle" name="title" value="${item.title}" required maxlength="100" />
+                <label for="editDescription">Description</label>
+                <textarea id="editDescription" name="description" required>${item.description}</textarea>
+                <label for="editStatus">Status</label>
+                <select id="editStatus" name="status" required>
+                  <option value="Open" ${item.status === 'Open' ? 'selected' : ''}>Open</option>
+                  <option value="Completed" ${item.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                </select>
+                <label for="editRating">Rating</label>
+                <div class="star-rating">
+                  ${[1, 2, 3, 4, 5].map(i => `
+                    <input type="radio" id="rating${i}" name="rating" value="${i}" ${item.rating === i ? 'checked' : ''}>
+                    <label for="rating${i}">★</label>
+                  `).join('')}
+                </div>
+                <label for="editFeedback">Feedback</label>
+                <textarea id="editFeedback" name="feedback">${item.feedback}</textarea>
+                <div style="display: flex; gap: 1rem;">
+                  <button type="submit" class="submit-btn">Save Changes</button>
+                  <button type="button" class="submit-btn" id="deleteItemBtn">Delete Task</button>
+                </div>
+              </form>
+            `;
+          }
+          const form = modalBody.querySelector(`.edit-${type}-form`);
           form.addEventListener('submit', e => {
             e.preventDefault();
-            const updatedCase = {
-              id: caseData.id,
+            const updatedItem = {
+              id: item.id,
               title: form.title.value.trim(),
-              type: form.type.value,
               status: form.status.value,
-              assignedTo: form.assignedTo.value.trim(),
               lastUpdated: new Date().toISOString().split('T')[0],
-              symptoms: form.symptoms.value.trim(),
-              history: form.history.value.trim(),
-              labResults: form.labResults.value.trim(),
-              diagnosis: form.diagnosis.value.trim(),
-              outcome: form.outcome.value.trim(),
-              notes: form.notes.value.trim()
+              creator: item.creator
             };
-            if (!updatedCase.title || !updatedCase.type || !updatedCase.status || !updatedCase.assignedTo || !updatedCase.symptoms || !updatedCase.history) {
-              showNotification('Please fill in all required fields.', 'error');
-              return;
+            if (type === 'case') {
+              updatedItem.type = form.type.value;
+              updatedItem.assignedTo = form.assignedTo.value.trim();
+              updatedItem.symptoms = form.symptoms.value.trim();
+              updatedItem.history = form.history.value.trim();
+              updatedItem.labResults = form.labResults.value.trim();
+              updatedItem.diagnosis = form.diagnosis.value.trim();
+              updatedItem.outcome = form.outcome.value.trim();
+              updatedItem.notes = form.notes.value.trim();
+              if (!updatedItem.title || !updatedItem.type || !updatedItem.assignedTo || !updatedItem.symptoms || !updatedItem.history) {
+                showNotification('Please fill in all required fields.', 'error');
+                return;
+              }
+              cases = cases.map(c => c.id === item.id ? updatedItem : c);
+              localStorage.setItem('cases', JSON.stringify(cases));
+              filteredCases = [...cases];
+            } else if (type === 'ticket') {
+              updatedItem.description = form.description.value.trim();
+              if (!updatedItem.title || !updatedItem.description) {
+                showNotification('Please fill in all required fields.', 'error');
+                return;
+              }
+              tickets = tickets.map(t => t.id === item.id ? updatedItem : t);
+              localStorage.setItem('tickets', JSON.stringify(tickets));
+              filteredTickets = [...tickets];
+            } else if (type === 'task') {
+              updatedItem.description = form.description.value.trim();
+              updatedItem.rating = parseInt(form.rating.value || '0');
+              updatedItem.feedback = form.feedback.value.trim();
+              if (!updatedItem.title || !updatedItem.description) {
+                showNotification('Please fill in all required fields.', 'error');
+                return;
+              }
+              tasks = tasks.map(t => t.id === item.id ? updatedItem : t);
+              localStorage.setItem('tasks', JSON.stringify(tasks));
+              filteredTasks = [...tasks];
             }
-            cases = cases.map(c => c.id === caseData.id ? updatedCase : c);
-            localStorage.setItem('cases', JSON.stringify(cases));
-            filteredCases = [...cases];
             modal.classList.remove('active');
             modal.setAttribute('aria-hidden', 'true');
-            showNotification('Case updated successfully!');
-            activateSection(document.querySelector('.nav-link.active').dataset.section);
+            showNotification(`${titlePrefix} updated successfully!`);
+            activateSection(type === 'case' ? 'cases' : type === 'ticket' ? 'tickets' : 'tasks');
           });
-          document.getElementById('deleteCaseBtn').addEventListener('click', () => {
-            if (confirm(`Are you sure you want to delete case ${caseData.id}?`)) {
-              cases = cases.filter(c => c.id !== caseData.id);
-              feedbackList = feedbackList.filter(f => f.caseId !== caseData.id);
-              localStorage.setItem('cases', JSON.stringify(cases));
-              localStorage.setItem('feedbackList', JSON.stringify(feedbackList));
-              filteredCases = [...cases];
+          document.getElementById('deleteItemBtn').addEventListener('click', () => {
+            if (confirm(`Are you sure you want to delete ${titlePrefix.toLowerCase()} ${item.id}?`)) {
+              if (type === 'case') {
+                cases = cases.filter(c => c.id !== item.id);
+                feedbackList = feedbackList.filter(f => f.caseId !== item.id);
+                localStorage.setItem('cases', JSON.stringify(cases));
+                localStorage.setItem('feedbackList', JSON.stringify(feedbackList));
+                filteredCases = [...cases];
+              } else if (type === 'ticket') {
+                tickets = tickets.filter(t => t.id !== item.id);
+                localStorage.setItem('tickets', JSON.stringify(tickets));
+                filteredTickets = [...tickets];
+              } else if (type === 'task') {
+                tasks = tasks.filter(t => t.id !== item.id);
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+                filteredTasks = [...tasks];
+              }
               modal.classList.remove('active');
               modal.setAttribute('aria-hidden', 'true');
-              showNotification('Case deleted successfully!');
-              activateSection('cases');
+              showNotification(`${titlePrefix} deleted successfully!`);
+              activateSection(type === 'case' ? 'cases' : type === 'ticket' ? 'tickets' : 'tasks');
             }
           });
         } else {
-          document.getElementById('editCaseBtn').addEventListener('click', () => openCaseModal(id, true));
-          const feedbackForm = modalBody.querySelector('.feedback-form');
-          feedbackForm.addEventListener('submit', e => {
-            e.preventDefault();
-            const feedbackText = feedbackForm.feedbackText.value.trim();
-            if (!feedbackText) {
-              showNotification('Feedback cannot be empty.', 'error');
-              return;
-            }
-            feedbackList.push({
-              caseId: caseData.id,
-              feedback: feedbackText,
-              timestamp: new Date().toISOString()
+          modalBody.innerHTML = `
+            ${dataFields.map(field => `
+              <div class="modal-section">
+                <h3>${field.charAt(0).toUpperCase() + field.slice(1)}</h3>
+                <p>${item[field] || 'N/A'}</p>
+              </div>
+            `).join('')}
+            ${type === 'task' && item.rating > 0 ? `
+              <div class="modal-section">
+                <h3>Rating</h3>
+                <p>${'★'.repeat(item.rating)}${'☆'.repeat(5 - item.rating)}</p>
+              </div>
+            ` : ''}
+            ${type === 'case' && user.role === 'admin' ? `
+              <button class="submit-btn" id="editItemBtn" style="margin-bottom: 1rem;">Edit Case</button>
+              <form class="feedback-form" aria-label="Case feedback form">
+                <label for="feedbackText">Submit Feedback</label>
+                <textarea id="feedbackText" name="feedbackText" rows="4" required placeholder="Enter your feedback..."></textarea>
+                <button type="submit" class="submit-btn">Submit Feedback</button>
+              </form>
+            ` : ''}
+          `;
+          if (type === 'case' && user.role === 'admin') {
+            document.getElementById('editItemBtn').addEventListener('click', () => openItemModal(id, type, true));
+            const feedbackForm = modalBody.querySelector('.feedback-form');
+            feedbackForm.addEventListener('submit', e => {
+              e.preventDefault();
+              const feedbackText = feedbackForm.feedbackText.value.trim();
+              if (!feedbackText) {
+                showNotification('Feedback cannot be empty.', 'error');
+                return;
+              }
+              feedbackList.push({
+                caseId: item.id,
+                feedback: feedbackText,
+                timestamp: new Date().toISOString()
+              });
+              localStorage.setItem('feedbackList', JSON.stringify(feedbackList));
+              notifications.push({
+                recipient: item.creator,
+                message: `New feedback on case ${item.id}: ${feedbackText.substring(0, 50)}${feedbackText.length > 50 ? '...' : ''}`,
+                timestamp: new Date().toISOString()
+              });
+              localStorage.setItem('notifications', JSON.stringify(notifications));
+              feedbackForm.reset();
+              showNotification('Feedback submitted successfully!');
+              if (user.name === item.creator) {
+                renderDashboard();
+              }
             });
-            localStorage.setItem('feedbackList', JSON.stringify(feedbackList));
-            feedbackForm.reset();
-            showNotification('Feedback submitted successfully!');
-          });
+          } else if ((type === 'ticket' || type === 'task') && user.role === 'admin') {
+            modalBody.innerHTML += `
+              <button class="submit-btn" id="editItemBtn" style="margin-bottom: 1rem;">Edit ${titlePrefix}</button>
+            `;
+            document.getElementById('editItemBtn').addEventListener('click', () => openItemModal(id, type, true));
+          }
         }
+        modal.classList.add('active');
+        modal.setAttribute('aria-hidden', 'false');
       }
 
       // Close modal
@@ -1043,8 +1640,7 @@
             <label for="caseOutcome">Outcome</label>
             <textarea id="caseOutcome" name="caseOutcome" rows="3" placeholder="Outcome (optional)"></textarea>
             <button type="submit" class="submit-btn">Submit Case</button>
-          </form>
-        `;
+          </form>        `;
         const form = content.querySelector('.new-case-form');
         form.addEventListener('submit', e => {
           e.preventDefault();
@@ -1053,6 +1649,7 @@
             title: form.caseTitle.value.trim(),
             type: form.caseType.value,
             status: 'Open',
+            creator: user.name,
             assignedTo: form.caseAssignedTo.value.trim(),
             lastUpdated: new Date().toISOString().split('T')[0],
             symptoms: form.caseSymptoms.value.trim(),
@@ -1101,13 +1698,38 @@
         document.getElementById('feedbackCaseFilter')?.addEventListener('change', renderFeedback);
       }
 
+      // Render members section (admin only)
+      function renderMembers() {
+        const memberPerformance = members.map(m => ({
+          name: m,
+          ...calculatePerformance(m)
+        }));
+        content.innerHTML = `
+          <h2>Team Members</h2>
+          <div class="stats-grid">
+            ${memberPerformance.map(mp => `
+              <div class="stat-card">
+                <h3>${mp.name}</h3>
+                <p>Completion: ${mp.completion}%</p>
+                <p>Contributions: ${mp.contributions}</p>
+                <p>Feedback Received: ${mp.feedback}</p>
+                <p>Avg Task Rating: ${mp.avgRating}/5</p>
+                <div class="progress-bar-container">
+                  <div class="progress-bar" style="width: ${mp.completion}%">${mp.completion}%</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+
       // Render about section
       function renderAbout() {
         content.innerHTML = `
           <h2>About MEDU Case Vault</h2>
-          <p>Welcome to the MEDU Case Vault, a curated collection of medical case studies designed for clinical learning and roleplay by the Medical Education Department.</p>
-          <p>This vault serves as a professional resource for medical students and educators to review, analyze, and contribute to medical knowledge through simulated real-world cases.</p>
-          <p>Features include case management, feedback submission, and an admin dashboard for case oversight.</p>
+          <p>Welcome to the MEDU Case Vault, a curated collection of medical case studies, tickets, and tasks designed for clinical learning and roleplay by the Medical Education Department.</p>
+          <p>Admins can manage cases, tickets, tasks, and provide feedback, while members can contribute cases, tickets, and tasks, and view their performance metrics.</p>
+          <p>Features include case management, ticket tracking, task assignment with ratings, feedback notifications, and performance tracking.</p>
           <p>Developed by Luna.C.Everly with emphasis on UX, accessibility, and immersive medical education.</p>
         `;
       }
@@ -1124,7 +1746,11 @@
       function activateSection(section) {
         navLinks.forEach(link => link.classList.toggle('active', link.dataset.section === section));
         filteredCases = [...cases];
+        filteredTickets = [...tickets];
+        filteredTasks = [...tasks];
         sortCases();
+        sortTickets();
+        sortTasks();
         switch (section) {
           case 'dashboard':
             renderDashboard();
@@ -1135,8 +1761,18 @@
           case 'newcase':
             renderNewCaseForm();
             break;
+          case 'tickets':
+            renderTicketsTable();
+            break;
+          case 'tasks':
+            renderTasksTable();
+            break;
           case 'feedback':
             renderFeedback();
+            break;
+          case 'members':
+            if (user.role === 'admin') renderMembers();
+            else activateSection('dashboard');
             break;
           case 'about':
             renderAbout();
